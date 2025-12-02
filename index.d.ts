@@ -1,9 +1,33 @@
 /**
- * @conceptkernel/client - TypeScript Definitions
- * ConceptKernel JavaScript Client Library v1.3.16
+ * @conceptkernel/ck-client-js - TypeScript Definitions
+ * ConceptKernel JavaScript Client Library
+ *
+ * Copyright (c) 2024-2025 ConceptKernel.org
+ * Contact: peter@styk.ai & dorota@styk.ai
+ * Repository: https://github.com/ConceptKernel/ck-client-js
+ *
+ * MIT License
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
-declare module '@conceptkernel/client' {
+declare module '@conceptkernel/ck-client-js' {
   /**
    * Connection options for ConceptKernel client
    */
@@ -174,23 +198,23 @@ declare module '@conceptkernel/client' {
     /**
      * Connect to ConceptKernel gateway with auto-discovery
      *
-     * @param gatewayUrl - Gateway URL (default: 'http://localhost:3000')
+     * @param gatewayUrl - Gateway URL (e.g., 'http://localhost:56000' for local discovery)
      * @param options - Connection options
      * @returns Connected client instance
      *
      * @example
      * ```typescript
-     * // Simple connect
-     * const ck = await ConceptKernel.connect();
+     * // Connect to local discovery port
+     * const ck = await ConceptKernel.connect('http://localhost:56000');
      *
      * // Connect with authentication
-     * const ck = await ConceptKernel.connect('http://localhost:3000', {
+     * const ck = await ConceptKernel.connect('http://localhost:56000', {
      *   auth: { username: 'alice', password: 'secret123' }
      * });
      * ```
      */
     static connect(
-      gatewayUrl?: string,
+      gatewayUrl: string,
       options?: ConnectionOptions
     ): Promise<ConceptKernel>;
 
