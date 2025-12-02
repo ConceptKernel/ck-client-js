@@ -1,12 +1,12 @@
 /**
- * @conceptkernel/client - ConceptKernel JavaScript Client Library
+ * @conceptkernel/ck-client-js - ConceptKernel JavaScript Client Library
  *
- * Elegant one-line connectivity to ConceptKernel v1.3.16 runtime
+ * Elegant one-line connectivity to ConceptKernel runtime
  *
  * @example
  * ```javascript
  * // Connect to gateway (auto-discover all services)
- * const ck = await ConceptKernel.connect('http://localhost:3000');
+ * const ck = await ConceptKernel.connect('http://localhost:56000');
  *
  * // Emit event to kernel (done!)
  * await ck.emit('UI.Bakery', { action: 'mix', ingredients: ['flour', 'eggs'] });
@@ -17,17 +17,16 @@
  * });
  * ```
  *
- * @version 1.3.16
  * @license MIT
  */
 
-console.log('[CK Client Library] Loading ConceptKernel client library v1.3.16 with verbose logging...');
+console.log('[CK Client Library] Loading ConceptKernel client library with verbose logging...');
 
 class ConceptKernel {
   /**
    * Connect to ConceptKernel gateway with auto-discovery
    *
-   * @param {string} [gatewayUrl='http://localhost:3000'] - Gateway URL
+   * @param {string} gatewayUrl - Gateway URL (e.g., 'http://localhost:56000' for local discovery)
    * @param {Object} [options] - Connection options
    * @param {boolean} [options.autoConnect=true] - Auto-connect WebSocket
    * @param {Object} [options.auth] - Authentication credentials
@@ -40,21 +39,24 @@ class ConceptKernel {
    *
    * @example
    * ```javascript
-   * // Simple connect
-   * const ck = await ConceptKernel.connect();
+   * // Connect to local discovery port
+   * const ck = await ConceptKernel.connect('http://localhost:56000');
    *
    * // Connect with authentication
-   * const ck = await ConceptKernel.connect('http://localhost:3000', {
+   * const ck = await ConceptKernel.connect('http://localhost:56000', {
    *   auth: { username: 'alice', password: 'secret123' }
    * });
    *
-   * // Connect without WebSocket
-   * const ck = await ConceptKernel.connect('http://localhost:3000', {
+   * // Connect to remote gateway
+   * const ck = await ConceptKernel.connect('https://gateway.example.com', {
    *   autoConnect: false
    * });
    * ```
    */
-  static async connect(gatewayUrl = 'http://localhost:3000', options = {}) {
+  static async connect(gatewayUrl, options = {}) {
+    if (!gatewayUrl) {
+      throw new Error('gatewayUrl is required (e.g., "http://localhost:56000" for local discovery)');
+    }
     console.log('[CK Client] Connecting to gateway:', gatewayUrl);
     console.log('[CK Client] Options:', options);
 
