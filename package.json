@@ -35,7 +35,7 @@
     "ontology",
     "process-tracking"
   ],
-  "author": "ConceptKernel Contributors",
+  "author": "Peter Styk <peter@styk.tv>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ConceptKernel/ck-client-js/issues"
@@ -43,8 +43,5 @@
   "homepage": "https://conceptkernel.org",
   "engines": {
     "node": ">=14.0.0"
-  },
-  "browser": {
-    "ws": false
   }
 }
