@@ -1,6 +1,6 @@
 {
   "name": "@conceptkernel/ck-client-js",
-  "version": "1.3.16",
+  "version": "1.3.17",
   "description": "Elegant JavaScript client for ConceptKernel - One-line connectivity to distributed event-sourced workflows",
   "main": "index.js",
   "types": "index.d.ts",
