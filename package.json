@@ -1,0 +1,58 @@
+{
+  "name": "@conceptkernel/ck-client-js",
+  "version": "1.3.16",
+  "description": "Elegant JavaScript client for ConceptKernel - One-line connectivity to distributed event-sourced workflows",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "mocha test/*.spec.js --timeout 10000",
+    "test:unit": "mocha test/unit.spec.js",
+    "test:integration": "mocha test/integration.spec.js --timeout 10000",
+    "test:browser": "playwright test",
+    "test:hot-kernels": "node hot-kernels.test.js",
+    "test:legacy": "node test/test.js",
+    "lint": "echo 'No linter configured'",
+    "prepublishOnly": "echo 'Skipping cleanup-for-export.sh during npm publish --dry-run';"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ConceptKernel/ck-client-js.git"
+  },
+  "keywords": [
+    "conceptkernel",
+    "event-sourcing",
+    "distributed-systems",
+    "workflow",
+    "real-time",
+    "websocket",
+    "bfo",
+    "ontology",
+    "process-tracking"
+  ],
+  "author": "ConceptKernel Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ConceptKernel/ck-client-js/issues"
+  },
+  "homepage": "https://conceptkernel.org",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browser": {
+    "ws": false
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "node-fetch": "^2.6.7",
+    "playwright": "^1.40.0",
+    "ws": "^8.13.0"
+  }
+}
