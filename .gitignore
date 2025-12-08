@@ -1,0 +1,18 @@
+# Node modules
+node_modules/
+
+# Test results
+test-results/
+playwright-report/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# NEVER COMMIT THESE - PRIVATE FILES
+docs/
+examples/
+test/
+test-*.js
+playwright.config.js
+ORGANIZATION-COMPLETE.md
