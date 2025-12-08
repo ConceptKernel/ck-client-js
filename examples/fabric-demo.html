@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabric Pattern Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .input-panel, .output-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        select, textarea, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .output-area {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .output-area.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .markdown-content {
+            line-height: 1.6;
+        }
+
+        .markdown-content h1 {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            padding-bottom: 0.3em;
+            border-bottom: 2px solid #eee;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.5em;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.2em;
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1em;
+        }
+
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 2em;
+            margin-bottom: 1em;
+        }
+
+        .markdown-content li {
+            margin-bottom: 0.5em;
+        }
+
+        .markdown-content code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .markdown-content pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1em;
+            margin-left: 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .info-message {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            color: #1565c0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧵 Fabric Pattern Demo</h1>
+            <p>Extract wisdom from text using AI-powered patterns</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div id="txInfo"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="input-panel">
+                <h2 class="panel-title">📝 Input</h2>
+
+                <div class="form-group">
+                    <label for="pattern">Pattern:</label>
+                    <select id="pattern">
+                        <option value="extract_wisdom">Extract Wisdom</option>
+                        <option value="summarize">Summarize</option>
+                        <option value="analyze_tech_impact">Analyze Tech Impact</option>
+                        <option value="explain_code">Explain Code</option>
+                        <option value="improve_writing">Improve Writing</option>
+                        <option value="extract_ideas">Extract Ideas</option>
+                        <option value="create_summary">Create Summary</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="query">Your Query:</label>
+                    <textarea id="query" placeholder="Enter your text here...">What is ConceptKernel and how does it work?</textarea>
+                </div>
+
+                <button id="submitBtn" onclick="sendQuery()">
+                    🚀 Send to Fabric
+                </button>
+            </div>
+
+            <div class="output-panel">
+                <h2 class="panel-title">📄 Output</h2>
+                <div id="output" class="output-area">
+                    <div class="info-message">
+                        Click "Send to Fabric" to see results here
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentTxId = null;
+
+        // Connect to System.Wss
+        function connect() {
+            const wsUrl = 'ws://localhost:56001';
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                updateStatus(true, 'Connected to System.Wss');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleMessage(msg);
+                } catch (err) {
+                    console.error('Parse error:', err);
+                }
+            };
+
+            ws.onerror = (error) => {
+                updateStatus(false, 'Connection error');
+                showError('WebSocket error: ' + error);
+            };
+
+            ws.onclose = () => {
+                updateStatus(false, 'Disconnected');
+                setTimeout(connect, 3000); // Reconnect after 3s
+            };
+        }
+
+        function updateStatus(connected, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            if (connected) {
+                dot.classList.add('connected');
+            } else {
+                dot.classList.remove('connected');
+            }
+
+            statusText.textContent = text;
+        }
+
+        function sendQuery() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                showError('Not connected to System.Wss');
+                return;
+            }
+
+            const pattern = document.getElementById('pattern').value;
+            const query = document.getElementById('query').value.trim();
+
+            if (!query) {
+                showError('Please enter a query');
+                return;
+            }
+
+            // Generate transaction ID
+            currentTxId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+            const message = {
+                txId: currentTxId,
+                edge: 'REQUESTS',
+                from: 'ckp://Agent.WebClient',
+                to: 'ckp://ConceptKernel.LLM.Fabric:v0.1',
+                payload: {
+                    query: query,
+                    pattern: pattern
+                }
+            };
+
+            ws.send(JSON.stringify(message));
+
+            // Show loading state
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            output.classList.add('loading');
+
+            // Update status
+            document.getElementById('txInfo').textContent = `TxId: ${currentTxId}`;
+            document.getElementById('submitBtn').disabled = true;
+        }
+
+        function handleMessage(msg) {
+            console.log('Received:', msg);
+
+            // Handle acknowledgment
+            if (msg.type === 'kernel_request_accepted' && msg.txId === currentTxId) {
+                showInfo('Request accepted, waiting for Fabric response...');
+                return;
+            }
+
+            // Handle kernel response
+            if (msg.type === 'kernel_response' && msg.txId === currentTxId) {
+                displayResponse(msg.data);
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('txInfo').textContent = '';
+                return;
+            }
+
+            // Handle welcome message
+            if (msg.type === 'connected') {
+                console.log('Welcome message:', msg);
+            }
+        }
+
+        function displayResponse(data) {
+            const output = document.getElementById('output');
+            output.classList.remove('loading');
+
+            if (data.exitCode !== 0) {
+                showError(`Fabric execution failed (exit code: ${data.exitCode})`);
+                return;
+            }
+
+            let response = data.response;
+
+            // Remove markdown code block wrapper if present
+            if (response.startsWith('```markdown\n')) {
+                response = response.substring('```markdown\n'.length);
+            }
+            if (response.endsWith('\n```')) {
+                response = response.substring(0, response.length - 4);
+            }
+            if (response.startsWith('```')) {
+                response = response.substring(3);
+            }
+
+            // Convert markdown to HTML
+            const htmlContent = marked.parse(response);
+
+            output.innerHTML = `
+                <div class="markdown-content">
+                    <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em;">
+                        <strong>Pattern:</strong> ${data.pattern} |
+                        <strong>Duration:</strong> ${data.duration_ms}ms |
+                        <strong>Process URN:</strong> ${data.processUrn}
+                    </div>
+                    ${htmlContent}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const output = document.getElementById('output');
+            output.classList.remove('loading');
+            output.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+
+        function showInfo(message) {
+            const output = document.getElementById('output');
+            output.classList.remove('loading');
+            output.innerHTML = `<div class="info-message">${message}</div>`;
+        }
+
+        // Connect on page load
+        window.addEventListener('load', connect);
+    </script>
+</body>
+</html>

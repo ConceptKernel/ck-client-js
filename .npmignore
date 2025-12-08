@@ -1,0 +1,60 @@
+# ========================================
+# CK Client JS - NPM Publish Exclusions
+# ========================================
+# This controls what gets published to npm
+# (separate from .gitignore which controls git tracking)
+
+# Documentation (keep in GitHub, exclude from npm)
+docs/
+*.md
+!README.md
+!LICENSE.md
+!CHANGELOG.md
+!RELEASE_NOTES_v*.md
+
+# Examples (users can see on GitHub)
+examples/
+
+# Tests (no need to publish tests)
+test/
+test-*.js
+*.spec.js
+playwright.config.js
+playwright-report/
+test-results/
+
+# Development Files
+.github/
+.git/
+.gitignore
+.gitattributes
+.editorconfig
+.eslintrc*
+.prettierrc*
+
+# CI/CD
+.travis.yml
+.circleci/
+azure-pipelines.yml
+
+# Old Versions (if not needed)
+v1.3.13.js
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary Files
+*.log
+*.tmp
+
+# ========================================
+# What WILL be published to npm:
+# ========================================
+# ✅ index.js           - Main library
+# ✅ index.d.ts         - TypeScript types
+# ✅ cli.js             - CLI tool
+# ✅ package.json       - Manifest
+# ✅ LICENSE            - License
+# ✅ README.md          - Documentation
+# ✅ schemas/           - Runtime schemas (if needed)

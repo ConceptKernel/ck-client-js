@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConceptKernel Query Interface</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .connection-status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .status-disconnected {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .status-connected {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .command-btn {
+      padding: 15px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .command-btn:hover:not(:disabled) {
+      background: #1976D2;
+    }
+
+    .command-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .output {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 20px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .output.loading {
+      text-align: center;
+      color: #999;
+      font-style: italic;
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .output-header h3 {
+      color: #333;
+      font-size: 16px;
+    }
+
+    .clear-btn {
+      padding: 5px 15px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .clear-btn:hover {
+      background: #d32f2f;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      background: #f5f5f5;
+      font-weight: 600;
+      color: #333;
+      font-size: 13px;
+    }
+
+    td {
+      font-size: 13px;
+      color: #555;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .badge-online {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .badge-offline {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px 20px;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .info-value {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ConceptKernel Query Interface</h1>
+    <p class="subtitle">All queries execute over WebSocket using ck-client-js</p>
+
+    <div id="connection-status" class="connection-status status-disconnected">
+      Disconnected
+    </div>
+
+    <div class="command-grid">
+      <button class="command-btn" onclick="connect()" id="connect-btn">
+        Connect to Gateway
+      </button>
+      <button class="command-btn" onclick="listDaemons()" id="daemon-list-btn" disabled>
+        List Daemons
+      </button>
+      <button class="command-btn" onclick="describeDaemon()" id="daemon-describe-btn" disabled>
+        Describe Daemon
+      </button>
+      <button class="command-btn" onclick="describeConcept()" id="concept-describe-btn" disabled>
+        Describe Concept
+      </button>
+      <button class="command-btn" onclick="listTransactions()" id="tx-list-btn" disabled>
+        List Transactions
+      </button>
+      <button class="command-btn" onclick="describeTransaction()" id="tx-describe-btn" disabled>
+        Describe Transaction
+      </button>
+    </div>
+
+    <div class="input-group">
+      <label for="gateway-url">Gateway URL:</label>
+      <input type="text" id="gateway-url" value="http://localhost:56000" placeholder="http://localhost:56000">
+    </div>
+
+    <div class="input-group">
+      <label for="param-input">Parameter (for describe commands):</label>
+      <input type="text" id="param-input" placeholder="e.g., System.Wss" value="System.Wss">
+    </div>
+
+    <div class="output-header">
+      <h3>Output:</h3>
+      <button class="clear-btn" onclick="clearOutput()">Clear</button>
+    </div>
+    <div id="output" class="output">No output yet. Connect to gateway to start.</div>
+  </div>
+
+  <script src="../index.js"></script>
+  <script>
+    let ck = null;
+    let discoveryData = null;
+
+    async function connect() {
+      const output = document.getElementById('output');
+      const statusEl = document.getElementById('connection-status');
+      const gatewayUrl = document.getElementById('gateway-url').value;
+
+      output.textContent = 'Connecting to ' + gatewayUrl + '...\n';
+      output.classList.add('loading');
+
+      try {
+        ck = await ConceptKernel.connect(gatewayUrl, {
+          autoConnect: true
+        });
+
+        // Fetch full discovery data
+        const discoveryResponse = await fetch(gatewayUrl + '/.well-known/ck-services');
+        discoveryData = await discoveryResponse.json();
+
+        statusEl.textContent = 'Connected via WebSocket';
+        statusEl.className = 'connection-status status-connected';
+
+        output.classList.remove('loading');
+        output.innerHTML = `<strong>✓ Connected to ConceptKernel Gateway</strong>
+
+Gateway:     ${gatewayUrl}
+WebSocket:   ${discoveryData.gateway.websocket}
+Domain:      ${discoveryData.domain}
+Version:     ${discoveryData.ck_version}
+Services:    ${Object.keys(discoveryData.services).join(', ')}
+Kernels:     ${discoveryData.kernels.filter(k => k.mode === 'ONLINE').length} online
+
+Ready to execute queries!`;
+
+        // Enable command buttons
+        document.querySelectorAll('.command-btn').forEach(btn => {
+          if (btn.id !== 'connect-btn') {
+            btn.disabled = false;
+          }
+        });
+
+      } catch (error) {
+        output.classList.remove('loading');
+        output.textContent = 'Error: ' + error.message;
+        statusEl.textContent = 'Connection Failed';
+        statusEl.className = 'connection-status status-disconnected';
+      }
+    }
+
+    async function listDaemons() {
+      if (!ck || !discoveryData) {
+        alert('Please connect first');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      output.classList.add('loading');
+      output.textContent = 'Querying daemons...';
+
+      const daemons = discoveryData.kernels
+        .filter(k => k.mode === 'ONLINE' && k.status === 'ACTIVE')
+        .map(k => ({
+          name: k.name,
+          port: k.port || '-',
+          type: k.type,
+          urn: k.urn,
+          status: k.status
+        }));
+
+      output.classList.remove('loading');
+
+      let html = `<strong>Running Daemons (${daemons.length})</strong>\n\n`;
+      html += '<div class="table-container"><table>';
+      html += '<tr><th>Name</th><th>Port</th><th>Type</th><th>Status</th></tr>';
+
+      daemons.forEach(d => {
+        html += '<tr>';
+        html += '<td>' + d.name + '</td>';
+        html += '<td>' + d.port + '</td>';
+        html += '<td>' + d.type + '</td>';
+        html += '<td><span class="badge badge-online">' + d.status + '</span></td>';
+        html += '</tr>';
+      });
+
+      html += '</table></div>';
+      output.innerHTML = html;
+    }
+
+    async function describeDaemon() {
+      if (!ck || !discoveryData) {
+        alert('Please connect first');
+        return;
+      }
+
+      const param = document.getElementById('param-input').value;
+      if (!param) {
+        alert('Please enter a daemon name');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      output.classList.add('loading');
+      output.textContent = 'Querying daemon: ' + param + '...';
+
+      const daemon = discoveryData.kernels.find(k =>
+        k.name === param && k.mode === 'ONLINE'
+      );
+
+      output.classList.remove('loading');
+
+      if (daemon) {
+        let html = `<strong>Daemon: ${daemon.name}</strong>\n\n`;
+        html += '<div class="info-grid">';
+        html += '<span class="info-label">Name:</span><span class="info-value">' + daemon.name + '</span>';
+        html += '<span class="info-label">URN:</span><span class="info-value">' + daemon.urn + '</span>';
+        html += '<span class="info-label">Type:</span><span class="info-value">' + daemon.type + '</span>';
+        html += '<span class="info-label">Status:</span><span class="info-value"><span class="badge badge-online">' + daemon.status + '</span></span>';
+        html += '<span class="info-label">Mode:</span><span class="info-value">' + daemon.mode + '</span>';
+        if (daemon.port) {
+          html += '<span class="info-label">Port:</span><span class="info-value">' + daemon.port + '</span>';
+        }
+        if (daemon.capabilities) {
+          html += '<span class="info-label">Capabilities:</span><span class="info-value">' + daemon.capabilities.join(', ') + '</span>';
+        }
+        html += '</div>';
+        output.innerHTML = html;
+      } else {
+        output.textContent = 'Daemon not found or not running';
+      }
+    }
+
+    async function describeConcept() {
+      if (!ck || !discoveryData) {
+        alert('Please connect first');
+        return;
+      }
+
+      const param = document.getElementById('param-input').value;
+      if (!param) {
+        alert('Please enter a concept name');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      output.classList.add('loading');
+      output.textContent = 'Querying concept: ' + param + '...';
+
+      const kernel = discoveryData.kernels.find(k =>
+        k.name === param || k.urn.includes(param)
+      );
+
+      output.classList.remove('loading');
+
+      if (kernel) {
+        let html = `<strong>Concept: ${kernel.name}</strong>\n\n`;
+        html += '<div class="info-grid">';
+        html += '<span class="info-label">Name:</span><span class="info-value">' + kernel.name + '</span>';
+        html += '<span class="info-label">URN:</span><span class="info-value">' + kernel.urn + '</span>';
+        html += '<span class="info-label">Type:</span><span class="info-value">' + kernel.type + '</span>';
+        html += '<span class="info-label">Mode:</span><span class="info-value">' + kernel.mode + '</span>';
+        html += '<span class="info-label">Status:</span><span class="info-value">';
+        if (kernel.mode === 'ONLINE') {
+          html += '<span class="badge badge-online">' + kernel.status + '</span>';
+        } else {
+          html += '<span class="badge badge-offline">' + kernel.status + '</span>';
+        }
+        html += '</span>';
+        if (kernel.port) {
+          html += '<span class="info-label">Port:</span><span class="info-value">' + kernel.port + '</span>';
+        }
+        if (kernel.capabilities) {
+          html += '<span class="info-label">Capabilities:</span><span class="info-value">' + kernel.capabilities.join(', ') + '</span>';
+        }
+        html += '</div>';
+        output.innerHTML = html;
+      } else {
+        output.innerHTML = `<strong>Concept not found</strong>\n\nAvailable concepts:\n` +
+          discoveryData.kernels.filter(k => k.mode === 'ONLINE').slice(0, 10).map(k => '  - ' + k.name).join('\n');
+      }
+    }
+
+    async function listTransactions() {
+      if (!ck) {
+        alert('Please connect first');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      output.innerHTML = `<strong>Transactions</strong>\n\nNote: Transaction tracking requires System.Registry to implement\nthe transaction tracking API. This is a placeholder.\n\nIn a real implementation, this would query System.Registry\nfor recent transactions over WebSocket.`;
+    }
+
+    async function describeTransaction() {
+      if (!ck) {
+        alert('Please connect first');
+        return;
+      }
+
+      const param = document.getElementById('param-input').value;
+      if (!param) {
+        alert('Please enter a transaction ID');
+        return;
+      }
+
+      const output = document.getElementById('output');
+      output.innerHTML = `<strong>Transaction: ${param}</strong>\n\nNote: Transaction tracking requires System.Registry to implement\nthe transaction tracking API. This is a placeholder.\n\nIn a real implementation, this would query System.Registry\nfor transaction details over WebSocket.`;
+    }
+
+    function clearOutput() {
+      document.getElementById('output').textContent = 'Output cleared.';
+    }
+  </script>
+</body>
+</html>

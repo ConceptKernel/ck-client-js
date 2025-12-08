@@ -76,6 +76,69 @@ const result = await ck.emit('System.Echo', {
 console.log('Sent as:', ck.actor);
 ```
 
+## Edge-Based Messaging (v1.3.18+)
+
+ConceptKernel v1.3.18 introduces **edge-based messaging** using BFO predicates to describe semantic relationships between kernels.
+
+### Message Format
+
+```javascript
+{
+  "txId": "1733445678901-a1b2c3d4",    // Transaction ID
+  "edge": "QUERIES",                    // BFO predicate (QUERIES, RESPONDS, ANNOUNCES, etc.)
+  "from": "ckp://Agent.Alice",          // Source kernel URN
+  "to": "ckp://System.Wss:v0.1",        // Target kernel URN
+  "payload": {                          // Kernel-specific payload
+    "action": "capabilities"
+  }
+}
+```
+
+### Connecting with Identity
+
+```javascript
+const ck = await ConceptKernel.connect('http://localhost:56000', {
+  identity: 'ckp://Agent.Alice'  // Your client's URN identity
+});
+```
+
+### Using Edge Predicates
+
+```javascript
+// Query kernel (default: QUERIES edge)
+const response = await ck.emit('System.Wss', { action: 'capabilities' });
+console.log('Response:', response.payload);
+
+// Use custom edge predicate
+await ck.emit('System.Bakery', { action: 'fork' }, { edge: 'TRANSFORMS' });
+
+// Announce to all listeners
+await ck.emit('System.Wss', { event: 'status_update' }, { edge: 'ANNOUNCES' });
+```
+
+### Edge Predicates
+
+Common BFO predicates:
+- `QUERIES` - Request information from a kernel
+- `RESPONDS` - Reply to a query
+- `ANNOUNCES` - Broadcast event to listeners
+- `TRANSFORMS` - Request state transformation
+- `VALIDATES` - Validate data or request
+- `PRODUCES` - Generate output
+- `REQUIRES` - Declare dependency
+
+### Payload Validation
+
+The `payload` structure must conform to the destination kernel's ontology schema:
+```
+ckp://{to}#schema/{edge}/{action}
+```
+
+For example:
+```
+ckp://System.Wss:v0.1#schema/QUERIES/capabilities
+```
+
 ## Real-Time Events
 
 ```javascript
@@ -83,7 +146,7 @@ console.log('Sent as:', ck.actor);
 ck.on('event', (event) => {
   console.log('Event from', event.kernel);
   console.log('Data:', event.data);
-  console.log('Tx ID:', event.txId);
+  console.log('Tx ID', event.txId);
 });
 
 // Connection events
@@ -168,9 +231,144 @@ Disconnect WebSocket.
 ck.disconnect();
 ```
 
+## URN Query API (v1.3.18+)
+
+Query ConceptKernel's ontology using URN patterns. Supports all Occurrents and Continuants from the CKP graph.
+
+### Query URN Resources
+
+```javascript
+// Query recent processes
+const processes = await ck.queryUrn('ckp://Process?limit=10&order=desc');
+
+// Query workflows
+const workflows = await ck.queryUrn('ckp://Workflow?status=in_progress');
+
+// Query improvements for specific kernel
+const improvements = await ck.queryUrn('ckp://ImprovementProcess?kernel=System.Gateway');
+
+// Query with kernel namespace (v1.4.0 style)
+const gatewayProcesses = await ck.queryUrn('ckp://System.Gateway:v1.0/Process?limit=20');
+```
+
+### Convenience Methods
+
+```javascript
+// Query Process occurrents
+const processes = await ck.queryProcesses({
+  type: 'invoke',
+  kernel: 'System.Gateway',
+  status: 'completed',
+  limit: 20
+});
+
+// Query Workflow occurrents
+const workflows = await ck.queryWorkflows({
+  status: 'in_progress',
+  trigger: 'daemon-startup'
+});
+
+// Query ImprovementProcess occurrents
+const improvements = await ck.queryImprovements({
+  kernel: 'ConceptKernel.LLM.Fabric',
+  phase: 'Consensus',
+  status: 'in_progress'
+});
+```
+
+## Introspection API
+
+Discover kernel capabilities and schemas at runtime.
+
+### Kernel Introspection
+
+```javascript
+// Get kernel capabilities
+const capabilities = await ck.introspect('System.Gateway');
+console.log('Actions:', capabilities.actions);
+console.log('Edges:', capabilities.edges);
+console.log('Version:', capabilities.version);
+```
+
+### Schema Discovery
+
+```javascript
+// Get schema for specific action
+const schema = await ck.getSchema('System.Wss', 'QUERIES', 'capabilities');
+console.log('Required fields:', schema.required);
+console.log('Properties:', schema.properties);
+```
+
+## Permission Management
+
+Client-side permission checking based on user roles.
+
+### Check Permissions
+
+```javascript
+// Check if user can perform action
+if (ck.hasPermission('bootstrap_kernel')) {
+  await ck.bootstrapKernel(config);
+} else {
+  console.log('Permission denied');
+}
+
+// Anonymous users can query only
+if (ck.hasPermission('query')) {
+  const data = await ck.queryProcesses({ limit: 10 });
+}
+```
+
+### Role-Based Permissions
+
+| Role | Allowed Actions |
+|------|-----------------|
+| anonymous | query, query_graph, query_urn, get_predicates, introspect, get_schema, capabilities |
+| user | query, query_graph, query_urn, introspect |
+| developer | bootstrap_kernel, query, query_graph, query_urn, introspect, get_schema, sparql |
+| admin | All actions |
+
+## Token Persistence
+
+Anonymous users automatically receive a JWT token that persists across browser sessions (7-day expiry).
+
+```javascript
+// Token automatically restored from localStorage on connect
+const ck = await ConceptKernel.connect('http://localhost:56000');
+console.log('Actor:', ck.actor);  // Previous session restored
+
+// Upgrade to authenticated user
+await ck.authenticate('alice', 'alice123');
+console.log('Roles:', ck.roles);  // ['user', 'developer', 'admin']
+
+// Token persisted across page reloads
+```
+
+## Graph Explorer
+
+Interactive dark-themed UI for exploring the CKP graph:
+
+```bash
+# Via VSCode internal server
+open http://127.0.0.1:3001/ckp-graph-explorer/
+
+# Or direct file access
+open ../ckp-graph-explorer/index.html
+```
+
+Features:
+- Minimalistic dark theme
+- Browse Processes, Kernels, Graph structure
+- Execute URN queries interactively
+- Run SPARQL queries (developer/admin only)
+- Introspect kernel capabilities
+- Anonymous and authenticated modes
+
 ## Examples
 
-See `/examples/` directory:
+See `/examples/` and project root:
+- `../ckp-graph-explorer/` - Minimalistic CKP graph explorer
+- `fabric-demo.html` - Fabric pattern integration demo
 - `demo.html` - Full-featured demo
 - `chat.html` - Real-time chat interface
 

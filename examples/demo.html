@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ConceptKernel Client Demo - v1.3.16 (Fixed)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    .status-bar {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .status-bar h2 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .status-item {
+      padding: 10px;
+      background: #f7fafc;
+      border-radius: 5px;
+      border-left: 4px solid #667eea;
+    }
+
+    .status-item label {
+      display: block;
+      font-size: 0.9em;
+      color: #718096;
+      margin-bottom: 5px;
+    }
+
+    .status-item .value {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .status-item.online {
+      border-left-color: #48bb78;
+    }
+
+    .status-item.offline {
+      border-left-color: #f56565;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      margin-bottom: 15px;
+      color: #333;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #4a5568;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 5px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+      background: #48bb78;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #38a169;
+    }
+
+    .btn-danger {
+      background: #f56565;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #e53e3e;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .events-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 2px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 10px;
+      background: #f7fafc;
+    }
+
+    .event-item {
+      background: white;
+      border-left: 4px solid #667eea;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .event-item.notification {
+      border-left-color: #ed8936;
+    }
+
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.9em;
+    }
+
+    .event-kernel {
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .event-time {
+      color: #718096;
+    }
+
+    .event-data {
+      background: #edf2f7;
+      padding: 8px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .badge-success {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .badge-danger {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+
+    .badge-info {
+      background: #bee3f8;
+      color: #2c5282;
+    }
+
+    .clear-btn {
+      float: right;
+      padding: 6px 12px;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 ConceptKernel Client Demo</h1>
+      <p>One-line connectivity to distributed event-sourced workflows</p>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <h2>Connection Status</h2>
+      <div class="status-grid">
+        <div class="status-item" id="status-discovery">
+          <label>Service Discovery</label>
+          <div class="value">Not Connected</div>
+        </div>
+        <div class="status-item" id="status-websocket">
+          <label>WebSocket</label>
+          <div class="value">Disconnected</div>
+        </div>
+        <div class="status-item" id="status-auth">
+          <label>Authentication</label>
+          <div class="value">Anonymous</div>
+        </div>
+        <div class="status-item" id="status-services">
+          <label>Available Services</label>
+          <div class="value">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Connection Card -->
+      <div class="card">
+        <h2>1. Connect to Gateway</h2>
+        <div class="form-group">
+          <label>Gateway URL</label>
+          <input type="text" id="gateway-url" value="http://localhost:56000" placeholder="http://localhost:56000">
+        </div>
+        <button class="btn btn-primary" id="btn-connect">Connect</button>
+        <button class="btn btn-danger" id="btn-disconnect" disabled>Disconnect</button>
+      </div>
+
+      <!-- Authentication Card -->
+      <div class="card">
+        <h2>2. Authenticate (Optional)</h2>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="auth-username" value="alice" placeholder="alice">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="auth-password" value="alice123" placeholder="alice123">
+        </div>
+        <button class="btn btn-success" id="btn-auth" disabled>Authenticate</button>
+      </div>
+    </div>
+
+    <!-- Emit Event Card -->
+    <div class="card">
+      <h2>3. Emit Event to Kernel</h2>
+      <div class="form-group">
+        <label>Target Kernel (URN or simple name)</label>
+        <input type="text" id="emit-kernel" value="System.Echo" placeholder="System.Echo (echoes back payload in transaction envelope)">
+      </div>
+      <div class="form-group">
+        <label>Event Payload (JSON)</label>
+        <textarea id="emit-payload">{
+  "action": "mix",
+  "ingredients": ["flour", "eggs", "butter", "sugar"]
+}</textarea>
+      </div>
+      <button class="btn btn-primary" id="btn-emit" disabled>Emit Event</button>
+      <button class="btn btn-primary" id="btn-emit-bake" disabled>Quick: Bake Cake</button>
+    </div>
+
+    <!-- Events List -->
+    <div class="card">
+      <h2>4. Real-Time Events
+        <button class="btn btn-danger clear-btn" id="btn-clear-events">Clear</button>
+      </h2>
+      <div class="events-list" id="events-list">
+        <p style="color: #718096; text-align: center; padding: 20px;">
+          Connect to start receiving events...
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load ConceptKernel Client -->
+  <script src="../index.js?v=1.3.16-verbose-v2" onerror="console.error('Failed to load ConceptKernel client library!')"></script>
+
+  <script>
+    console.log('[Demo] Script section starting...');
+    console.log('[Demo] ConceptKernel class available:', typeof ConceptKernel !== 'undefined');
+
+    // Global error handlers to prevent crashes
+    window.addEventListener('error', (event) => {
+      console.error('[Demo] Global error caught:', event.error);
+      console.error('[Demo] Error message:', event.message);
+      console.error('[Demo] Error filename:', event.filename);
+      console.error('[Demo] Error line:', event.lineno);
+      console.error('[Demo] Error stack:', event.error?.stack);
+      event.preventDefault(); // Prevent browser from crashing/reloading
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[Demo] Unhandled promise rejection:', event.reason);
+      console.error('[Demo] Promise:', event.promise);
+      event.preventDefault(); // Prevent browser from crashing/reloading
+    });
+
+    let ck = null;
+    let eventCount = 0;
+
+    // DOM elements
+    const btnConnect = document.getElementById('btn-connect');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+    const btnAuth = document.getElementById('btn-auth');
+    const btnEmit = document.getElementById('btn-emit');
+    const btnEmitBake = document.getElementById('btn-emit-bake');
+    const btnClearEvents = document.getElementById('btn-clear-events');
+
+    const gatewayUrl = document.getElementById('gateway-url');
+    const authUsername = document.getElementById('auth-username');
+    const authPassword = document.getElementById('auth-password');
+    const emitKernel = document.getElementById('emit-kernel');
+    const emitPayload = document.getElementById('emit-payload');
+    const eventsList = document.getElementById('events-list');
+
+    // Status elements
+    const statusDiscovery = document.getElementById('status-discovery');
+    const statusWebsocket = document.getElementById('status-websocket');
+    const statusAuth = document.getElementById('status-auth');
+    const statusServices = document.getElementById('status-services');
+
+    // Connect button
+    btnConnect.addEventListener('click', async (event) => {
+      event.preventDefault(); // Prevent any default button behavior
+      console.log('[Demo] Connect button clicked');
+
+      try {
+        btnConnect.disabled = true;
+        btnConnect.textContent = 'Connecting...';
+
+        ck = await ConceptKernel.connect(gatewayUrl.value);
+
+        // Update status
+        updateStatus();
+
+        // Register event handlers
+        ck.on('event', handleEvent);
+        ck.on('notification', handleNotification);
+        ck.on('connected', () => {
+          updateStatus();
+          addLogEvent('info', 'WebSocket connected');
+        });
+        ck.on('disconnected', () => {
+          updateStatus();
+          addLogEvent('warning', 'WebSocket disconnected');
+        });
+        ck.on('authenticated', ({ actor, roles }) => {
+          updateStatus();
+          addLogEvent('success', `Authenticated as ${actor} with roles: ${roles.join(', ')}`);
+        });
+        ck.on('error', ({ message, error }) => {
+          addLogEvent('error', `Error: ${message}`, error);
+        });
+
+        btnConnect.disabled = true;
+        btnDisconnect.disabled = false;
+        btnAuth.disabled = false;
+        btnEmit.disabled = false;
+        btnEmitBake.disabled = false;
+
+        addLogEvent('success', 'Connected to ConceptKernel gateway');
+
+      } catch (err) {
+        console.error('Connection failed:', err);
+        addLogEvent('error', 'Connection failed', err.message);
+        btnConnect.disabled = false;
+        btnConnect.textContent = 'Connect';
+      }
+    });
+
+    // Disconnect button
+    btnDisconnect.addEventListener('click', () => {
+      if (ck) {
+        ck.disconnect();
+        ck = null;
+        updateStatus();
+
+        btnConnect.disabled = false;
+        btnConnect.textContent = 'Connect';
+        btnDisconnect.disabled = true;
+        btnAuth.disabled = true;
+        btnEmit.disabled = true;
+        btnEmitBake.disabled = true;
+
+        addLogEvent('info', 'Disconnected from gateway');
+      }
+    });
+
+    // Authenticate button
+    btnAuth.addEventListener('click', async (event) => {
+      event.preventDefault(); // Prevent any default button behavior
+      console.log('[Demo] Authenticate button clicked');
+
+      if (!ck) return;
+
+      try {
+        btnAuth.disabled = true;
+        btnAuth.textContent = 'Authenticating...';
+
+        await ck.authenticate(authUsername.value, authPassword.value);
+
+        btnAuth.textContent = 'Authenticated ✓';
+        updateStatus();
+
+      } catch (err) {
+        console.error('Authentication failed:', err);
+        addLogEvent('error', 'Authentication failed', err.message);
+        btnAuth.disabled = false;
+        btnAuth.textContent = 'Authenticate';
+      }
+    });
+
+    // Emit button - CRITICAL: Wrapped in try-catch to prevent crashes
+    btnEmit.addEventListener('click', async (event) => {
+      try {
+        console.log('[Demo] === EMIT BUTTON CLICKED - START ===');
+
+        // CRITICAL: Prevent any default behaviors that could reload page
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+        }
+
+        console.log('[Demo] Event prevented, checking connection...');
+
+        if (!ck) {
+          console.error('[Demo] Cannot emit - not connected');
+          alert('Please connect first!');
+          return;
+        }
+
+        console.log('[Demo] Connection OK, preparing to emit...');
+        const kernel = emitKernel.value;
+        console.log('[Demo] Target kernel:', kernel);
+        console.log('[Demo] Raw payload:', emitPayload.value);
+
+        const payload = JSON.parse(emitPayload.value);
+        console.log('[Demo] Parsed payload:', payload);
+
+        btnEmit.disabled = true;
+        btnEmit.textContent = 'Emitting...';
+
+        console.log('[Demo] Calling ck.emit()...');
+        const result = await ck.emit(kernel, payload);
+        console.log('[Demo] Emit result:', result);
+        console.log('[Demo] Result type:', typeof result);
+        console.log('[Demo] Result keys:', result ? Object.keys(result) : 'null');
+
+        // Show the full response envelope in events list
+        addLogEvent('success', `Event emitted to ${kernel}`, result);
+
+        btnEmit.disabled = false;
+        btnEmit.textContent = 'Emit Event';
+
+      } catch (err) {
+        console.error('[Demo] === EMIT HANDLER ERROR ===');
+        console.error('[Demo] Emit failed:', err);
+        console.error('[Demo] Error message:', err.message);
+        console.error('[Demo] Error stack:', err.stack);
+        addLogEvent('error', 'Emit failed', err.message);
+        btnEmit.disabled = false;
+        btnEmit.textContent = 'Emit Event';
+      } finally {
+        console.log('[Demo] === EMIT BUTTON CLICKED - END ===');
+      }
+    }, { capture: true }); // Use capture phase to catch event first
+
+    // Quick bake button
+    btnEmitBake.addEventListener('click', async (event) => {
+      event.preventDefault(); // Prevent any default button behavior
+      console.log('[Demo] Quick Bake button clicked');
+
+      if (!ck) return;
+
+      try {
+        const result = await ck.emit('Recipes.BakeCake', {
+          temperature: 350,
+          duration: 30,
+          recipe: 'Chocolate Cake'
+        });
+
+        addLogEvent('success', 'Bake cake event emitted', {
+          txId: result.txId
+        });
+
+      } catch (err) {
+        console.error('[Demo] Bake emit failed:', err);
+        addLogEvent('error', 'Bake emit failed', err.message);
+      }
+    });
+
+    // Clear events button
+    btnClearEvents.addEventListener('click', () => {
+      eventsList.innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">Events cleared. Waiting for new events...</p>';
+      eventCount = 0;
+    });
+
+    // Handle incoming events
+    function handleEvent(event) {
+      console.log('[Demo] Received event:', event);
+      eventCount++;
+      addEvent(event, 'event');
+    }
+
+    function handleNotification(event) {
+      console.log('[Demo] Received notification:', event);
+      eventCount++;
+      addEvent(event, 'notification');
+    }
+
+    function addEvent(event, type) {
+      // Remove placeholder if present
+      if (eventCount === 1) {
+        eventsList.innerHTML = '';
+      }
+
+      const eventItem = document.createElement('div');
+      eventItem.className = `event-item ${type}`;
+
+      const timestamp = new Date(event.timestamp || Date.now()).toLocaleTimeString();
+
+      eventItem.innerHTML = `
+        <div class="event-header">
+          <span class="event-kernel">${event.kernel || 'Unknown'}</span>
+          <span class="event-time">${timestamp}</span>
+        </div>
+        <div class="event-data">${JSON.stringify(event.data || event, null, 2)}</div>
+      `;
+
+      eventsList.insertBefore(eventItem, eventsList.firstChild);
+
+      // Limit to 50 events
+      if (eventsList.children.length > 50) {
+        eventsList.removeChild(eventsList.lastChild);
+      }
+    }
+
+    function addLogEvent(level, message, data) {
+      const logEvent = {
+        type: level,
+        kernel: 'System.Client',
+        timestamp: new Date().toISOString(),
+        data: { message, ...(data && { details: data }) }
+      };
+      addEvent(logEvent, level);
+    }
+
+    // Update status display
+    function updateStatus() {
+      const status = ck ? ck.getStatus() : {
+        discovered: false,
+        websocketConnected: false,
+        authenticated: false,
+        availableServices: []
+      };
+
+      // Discovery status
+      statusDiscovery.className = 'status-item ' + (status.discovered ? 'online' : 'offline');
+      statusDiscovery.querySelector('.value').textContent = status.discovered ? 'Connected' : 'Not Connected';
+
+      // WebSocket status
+      statusWebsocket.className = 'status-item ' + (status.websocketConnected ? 'online' : 'offline');
+      statusWebsocket.querySelector('.value').textContent = status.websocketConnected ? 'Connected' : 'Disconnected';
+
+      // Auth status
+      statusAuth.className = 'status-item ' + (status.authenticated ? 'online' : '');
+      statusAuth.querySelector('.value').textContent = status.authenticated
+        ? `${ck.actor.split('#')[1]} (${ck.roles.join(', ')})`
+        : 'Anonymous';
+
+      // Services count
+      statusServices.querySelector('.value').textContent = status.availableServices.length;
+    }
+
+    // Initialize
+    console.log('[Demo] ConceptKernel Client Demo ready!');
+    console.log('[Demo] Gateway URL:', gatewayUrl.value);
+    console.log('[Demo] Services running - Gateway: http://localhost:56000, WebSocket: ws://localhost:56001');
+    console.log('[Demo] Click "Connect" button to start...');
+  </script>
+</body>
+</html>

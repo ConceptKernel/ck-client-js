@@ -1,0 +1,81 @@
+# ========================================
+# CK Client JS - Comprehensive .gitignore
+# ========================================
+
+# Dependencies
+node_modules/
+package-lock.json.backup
+
+# Test Results & Reports
+test-results/
+playwright-report/
+.playwright/
+coverage/
+.nyc_output/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build Output
+dist/
+build/
+lib/
+*.tgz
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+
+# Lock Files (optional - comment out if you want to track)
+# package-lock.json
+# yarn.lock
+
+# ========================================
+# Project-Specific (Keep Development Files)
+# ========================================
+
+# DO NOT IGNORE (keep in git):
+# - docs/               ✅ Documentation
+# - examples/           ✅ Examples
+# - test/               ✅ Tests
+# - test-*.js           ✅ Manual test scripts
+# - schemas/            ✅ JSON schemas
+# - cli.js              ✅ CLI tool
+# - playwright.config.js ✅ Test config
+
+# These files ARE tracked in git but
+# will be excluded from npm via .npmignore

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ConceptKernel Chat - v1.3.16</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a2e;
+      height: 100vh;
+      overflow: hidden;
+      color: #eee;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      background: #16213e;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    .top-bar h1 {
+      font-size: 1.5em;
+      color: #00d4ff;
+      margin: 0;
+    }
+
+    .connection-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .connection-controls input {
+      padding: 8px 12px;
+      border: 1px solid #0f3460;
+      border-radius: 5px;
+      background: #1a1a2e;
+      color: #eee;
+      font-size: 0.9em;
+    }
+
+    .connection-controls button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-connect {
+      background: #00d4ff;
+      color: #16213e;
+    }
+
+    .btn-connect:hover {
+      background: #00b8e6;
+    }
+
+    .btn-connect:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #1a1a2e;
+      border-radius: 5px;
+      font-size: 0.85em;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #666;
+    }
+
+    .status-dot.connected {
+      background: #00ff88;
+      box-shadow: 0 0 10px #00ff88;
+    }
+
+    .status-dot.authenticated {
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+
+    /* Main Content */
+    .main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Participants Sidebar */
+    .participants-sidebar {
+      width: 250px;
+      background: #16213e;
+      border-right: 2px solid #0f3460;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .participants-header {
+      padding: 15px;
+      border-bottom: 1px solid #0f3460;
+      font-weight: 600;
+      color: #00d4ff;
+    }
+
+    .participants-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .participant-item {
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .participant-item:hover {
+      background: #1a1a2e;
+    }
+
+    .participant-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .participant-avatar.user {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .participant-avatar.kernel {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-name {
+      font-weight: 600;
+      font-size: 0.9em;
+      color: #fff;
+    }
+
+    .participant-type {
+      font-size: 0.75em;
+      color: #999;
+    }
+
+    /* Chat Area */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0f1419;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .chat-message {
+      display: flex;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1em;
+    }
+
+    .message-avatar.user {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .message-avatar.kernel {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .message-avatar.system {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    }
+
+    .message-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+
+    .message-sender {
+      font-weight: 600;
+      color: #00d4ff;
+      font-size: 0.95em;
+    }
+
+    .message-time {
+      font-size: 0.75em;
+      color: #666;
+    }
+
+    .message-type-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.7em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .message-type-badge.user {
+      background: #667eea33;
+      color: #a5b4fc;
+    }
+
+    .message-type-badge.kernel {
+      background: #f5576c33;
+      color: #fda4af;
+    }
+
+    .message-body {
+      background: #16213e;
+      padding: 12px;
+      border-radius: 8px;
+      word-wrap: break-word;
+      max-width: 100%;
+    }
+
+    .message-body pre {
+      margin: 0;
+      padding: 10px;
+      background: #0f1419;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 0.85em;
+      color: #00ff88;
+    }
+
+    .message-metadata {
+      margin-top: 8px;
+      font-size: 0.8em;
+      color: #666;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .metadata-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .metadata-label {
+      color: #999;
+    }
+
+    .metadata-value {
+      color: #00d4ff;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Message Input */
+    .message-input-area {
+      padding: 20px;
+      background: #16213e;
+      border-top: 2px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    .input-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .input-controls input,
+    .input-controls select {
+      padding: 8px 12px;
+      border: 1px solid #0f3460;
+      border-radius: 5px;
+      background: #1a1a2e;
+      color: #eee;
+      font-size: 0.9em;
+    }
+
+    .input-controls select {
+      flex: 1;
+    }
+
+    .message-input-box {
+      display: flex;
+      gap: 10px;
+    }
+
+    .message-input-box textarea {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #0f3460;
+      border-radius: 5px;
+      background: #1a1a2e;
+      color: #eee;
+      font-family: inherit;
+      font-size: 0.95em;
+      resize: vertical;
+      min-height: 60px;
+      max-height: 200px;
+    }
+
+    .message-input-box button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      background: #00d4ff;
+      color: #16213e;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .message-input-box button:hover:not(:disabled) {
+      background: #00b8e6;
+      transform: translateY(-2px);
+    }
+
+    .message-input-box button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1a2e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #0f3460;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00d4ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <h1>🚀 ConceptKernel Chat</h1>
+      <div class="connection-controls">
+        <input type="text" id="gateway-url" value="http://localhost:56000" placeholder="Gateway URL">
+        <input type="text" id="auth-username" value="alice" placeholder="Username">
+        <input type="password" id="auth-password" value="alice123" placeholder="Password">
+        <button type="button" class="btn-connect" id="btn-connect">Connect</button>
+        <button type="button" class="btn-connect" id="btn-auth" disabled>Authenticate</button>
+        <div class="status-indicator">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Disconnected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Participants Sidebar -->
+      <div class="participants-sidebar">
+        <div class="participants-header">
+          Participants (<span id="participant-count">0</span>)
+        </div>
+        <div class="participants-list" id="participants-list">
+          <div style="padding: 20px; text-align: center; color: #666;">
+            Connect to see participants...
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Area -->
+      <div class="chat-area">
+        <div class="chat-messages" id="chat-messages">
+          <div style="text-align: center; padding: 50px; color: #666;">
+            <h2 style="color: #00d4ff; margin-bottom: 10px;">Welcome to ConceptKernel Chat</h2>
+            <p>Connect to the gateway to start chatting with users and kernels</p>
+          </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="message-input-area">
+          <div class="input-controls">
+            <select id="target-kernel">
+              <option value="System.Echo">System.Echo (Echo Service)</option>
+              <option value="UI.Bakery">UI.Bakery (Bakery Workflow)</option>
+              <option value="System.Registry">System.Registry (Service Registry)</option>
+            </select>
+          </div>
+          <div class="message-input-box">
+            <textarea id="message-input" placeholder="Type your message... (JSON format or plain text)">{"action": "mix", "ingredients": ["flour", "eggs", "butter"]}</textarea>
+            <button type="button" id="btn-send" disabled>Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load ConceptKernel Client -->
+  <script src="../index.js?v=1.3.16-verbose-v2"></script>
+
+  <script>
+    let ck = null;
+    const participants = new Map(); // Track all participants (users + kernels)
+    let messageCount = 0;
+
+    // DOM elements
+    const btnConnect = document.getElementById('btn-connect');
+    const btnAuth = document.getElementById('btn-auth');
+    const btnSend = document.getElementById('btn-send');
+    const gatewayUrl = document.getElementById('gateway-url');
+    const authUsername = document.getElementById('auth-username');
+    const authPassword = document.getElementById('auth-password');
+    const targetKernel = document.getElementById('target-kernel');
+    const messageInput = document.getElementById('message-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const participantsList = document.getElementById('participants-list');
+    const participantCount = document.getElementById('participant-count');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    // Add participant to sidebar
+    function addParticipant(id, name, type, roles = []) {
+      if (participants.has(id)) return;
+
+      const initials = name.split('.').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+      participants.set(id, { id, name, type, roles, initials });
+
+      updateParticipantsList();
+    }
+
+    function updateParticipantsList() {
+      participantsList.innerHTML = '';
+
+      const sortedParticipants = Array.from(participants.values()).sort((a, b) => {
+        if (a.type === 'user' && b.type !== 'user') return -1;
+        if (a.type !== 'user' && b.type === 'user') return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      sortedParticipants.forEach(participant => {
+        const item = document.createElement('div');
+        item.className = 'participant-item';
+        item.innerHTML = `
+          <div class="participant-avatar ${participant.type}">
+            ${participant.initials}
+          </div>
+          <div class="participant-info">
+            <div class="participant-name">${participant.name}</div>
+            <div class="participant-type">${participant.type}${participant.roles.length ? ': ' + participant.roles.join(', ') : ''}</div>
+          </div>
+        `;
+        participantsList.appendChild(item);
+      });
+
+      participantCount.textContent = participants.size;
+    }
+
+    // Add message to chat
+    function addChatMessage(sender, senderType, message, metadata = {}) {
+      if (messageCount === 0) {
+        chatMessages.innerHTML = '';
+      }
+      messageCount++;
+
+      const senderName = sender.includes('#') ? sender.split('#')[1] : sender;
+      const initials = senderName.split('.').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+      const timestamp = new Date(metadata.timestamp || Date.now()).toLocaleTimeString();
+
+      // Add sender as participant
+      addParticipant(sender, senderName, senderType, metadata.roles || []);
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'chat-message';
+
+      let messageBody = '';
+      if (typeof message === 'string') {
+        messageBody = message;
+      } else {
+        messageBody = `<pre>${JSON.stringify(message, null, 2)}</pre>`;
+      }
+
+      let metadataHtml = '';
+      if (metadata.txId || metadata.processUrn || metadata.kernel) {
+        metadataHtml = '<div class="message-metadata">';
+        if (metadata.kernel) {
+          metadataHtml += `<div class="metadata-item"><span class="metadata-label">Kernel:</span> <span class="metadata-value">${metadata.kernel}</span></div>`;
+        }
+        if (metadata.txId) {
+          metadataHtml += `<div class="metadata-item"><span class="metadata-label">TxID:</span> <span class="metadata-value">${metadata.txId.substring(0, 16)}...</span></div>`;
+        }
+        if (metadata.processUrn) {
+          const processId = metadata.processUrn.split('#')[1];
+          metadataHtml += `<div class="metadata-item"><span class="metadata-label">Process:</span> <span class="metadata-value">${processId.substring(0, 20)}...</span></div>`;
+        }
+        metadataHtml += '</div>';
+      }
+
+      messageDiv.innerHTML = `
+        <div class="message-avatar ${senderType}">
+          ${initials}
+        </div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-sender">${senderName}</span>
+            <span class="message-type-badge ${senderType}">${senderType}</span>
+            <span class="message-time">${timestamp}</span>
+          </div>
+          <div class="message-body">
+            ${messageBody}
+          </div>
+          ${metadataHtml}
+        </div>
+      `;
+
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Update status indicator
+    function updateStatus() {
+      if (!ck) {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Disconnected';
+        return;
+      }
+
+      const status = ck.getStatus();
+
+      if (status.authenticated) {
+        statusDot.className = 'status-dot authenticated';
+        statusText.textContent = `${ck.actor.split('#')[1]} (authenticated)`;
+      } else if (status.websocketConnected) {
+        statusDot.className = 'status-dot connected';
+        statusText.textContent = 'Connected (anonymous)';
+      } else {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Disconnected';
+      }
+    }
+
+    // Connect button
+    btnConnect.addEventListener('click', async (event) => {
+      event.preventDefault();
+
+      try {
+        btnConnect.disabled = true;
+        btnConnect.textContent = 'Connecting...';
+
+        ck = await ConceptKernel.connect(gatewayUrl.value);
+
+        // Register event handlers
+        ck.on('event', (event) => {
+          console.log('[Chat] Received event:', event);
+          addChatMessage(
+            event.kernel || 'Unknown',
+            'kernel',
+            event.data || event,
+            event
+          );
+        });
+
+        ck.on('notification', (event) => {
+          console.log('[Chat] Received notification:', event);
+          addChatMessage(
+            event.kernel || 'System',
+            'system',
+            event.data || event,
+            event
+          );
+        });
+
+        ck.on('connected', () => {
+          updateStatus();
+          addChatMessage('System', 'system', 'Connected to ConceptKernel gateway');
+        });
+
+        ck.on('authenticated', ({ actor, roles }) => {
+          updateStatus();
+          addChatMessage('System', 'system', `Authenticated as ${actor} with roles: ${roles.join(', ')}`);
+        });
+
+        ck.on('disconnected', () => {
+          updateStatus();
+          addChatMessage('System', 'system', 'Disconnected from gateway');
+        });
+
+        ck.on('error', ({ message }) => {
+          addChatMessage('System', 'system', `Error: ${message}`);
+        });
+
+        btnConnect.textContent = 'Connected';
+        btnAuth.disabled = false;
+        btnSend.disabled = false;
+        updateStatus();
+
+        addChatMessage('System', 'system', 'Connected to ConceptKernel Chat. You can now send messages.');
+
+      } catch (err) {
+        console.error('[Chat] Connection failed:', err);
+        addChatMessage('System', 'system', `Connection failed: ${err.message}`);
+        btnConnect.disabled = false;
+        btnConnect.textContent = 'Connect';
+      }
+    });
+
+    // Authenticate button
+    btnAuth.addEventListener('click', async (event) => {
+      event.preventDefault();
+
+      if (!ck) return;
+
+      try {
+        btnAuth.disabled = true;
+        btnAuth.textContent = 'Authenticating...';
+
+        await ck.authenticate(authUsername.value, authPassword.value);
+
+        btnAuth.textContent = 'Authenticated ✓';
+        updateStatus();
+
+      } catch (err) {
+        console.error('[Chat] Authentication failed:', err);
+        addChatMessage('System', 'system', `Authentication failed: ${err.message}`);
+        btnAuth.disabled = false;
+        btnAuth.textContent = 'Authenticate';
+      }
+    });
+
+    // Send message button
+    btnSend.addEventListener('click', async (event) => {
+      event.preventDefault();
+
+      if (!ck || !messageInput.value.trim()) return;
+
+      try {
+        const kernel = targetKernel.value;
+        const rawMessage = messageInput.value.trim();
+
+        // Parse message as JSON or send as plain text
+        let payload;
+        try {
+          payload = JSON.parse(rawMessage);
+        } catch (e) {
+          payload = { message: rawMessage };
+        }
+
+        // Show sent message immediately
+        const currentUser = ck.actor || 'ckp://System.Oidc.User#anonymous';
+        addChatMessage(currentUser, 'user', payload, {
+          kernel: kernel,
+          timestamp: new Date().toISOString()
+        });
+
+        // Send to kernel
+        const result = await ck.emit(kernel, payload);
+
+        console.log('[Chat] Message sent:', result);
+
+        // Show response if it includes payload
+        if (result.payload) {
+          addChatMessage(
+            result.kernel,
+            'kernel',
+            result.payload,
+            result
+          );
+        }
+
+        // Clear input
+        messageInput.value = '{"action": "mix", "ingredients": ["flour", "eggs", "butter"]}';
+
+      } catch (err) {
+        console.error('[Chat] Send failed:', err);
+        addChatMessage('System', 'system', `Failed to send message: ${err.message}`);
+      }
+    });
+
+    // Enter to send (Shift+Enter for new line)
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        btnSend.click();
+      }
+    });
+
+    console.log('[Chat] ConceptKernel Chat initialized');
+  </script>
+</body>
+</html>

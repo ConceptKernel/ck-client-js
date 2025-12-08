@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://conceptkernel.org/schemas/envelope.payload.v1.3.18.schema.json",
+  "title": "ConceptKernel Edge Message Envelope",
+  "description": "Edge-based message envelope for kernel-to-kernel communication in ConceptKernel v1.3.18. Uses BFO predicates to describe semantic relationships between kernels.",
+  "version": "1.3.18",
+  "type": "object",
+  "required": ["txId", "edge", "from", "to", "payload"],
+  "properties": {
+    "txId": {
+      "type": "string",
+      "description": "Transaction identifier in format: {timestampMs}-{shortGuid}",
+      "pattern": "^[0-9]{13,}-[a-f0-9]{8}$",
+      "examples": [
+        "1764924334492-08060309",
+        "1733445678901-a1b2c3d4"
+      ]
+    },
+    "edge": {
+      "type": "string",
+      "description": "BFO predicate describing the semantic relationship (QUERIES, RESPONDS, ANNOUNCES, TRANSFORMS, etc.). Must be SCREAMING_SNAKE_CASE.",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$",
+      "examples": [
+        "QUERIES",
+        "RESPONDS",
+        "ANNOUNCES",
+        "TRANSFORMS",
+        "VALIDATES",
+        "PRODUCES",
+        "REQUIRES",
+        "ANALYZES_STATE"
+      ]
+    },
+    "from": {
+      "type": "string",
+      "description": "Source kernel URN in format: ckp://{KernelName}:{version} or ckp://Agent.{Name}",
+      "pattern": "^ckp://[A-Z][a-zA-Z0-9]*(\\.[A-Z][a-zA-Z0-9]*)*(:[a-zA-Z0-9.-]+)?$",
+      "examples": [
+        "ckp://Agent.Alice",
+        "ckp://System.Wss:v0.1",
+        "ckp://ConceptKernel.LLM.Fabric:v0.1"
+      ]
+    },
+    "to": {
+      "type": "string",
+      "description": "Target kernel URN in format: ckp://{KernelName}:{version}",
+      "pattern": "^ckp://[A-Z][a-zA-Z0-9]*(\\.[A-Z][a-zA-Z0-9]*)*(:[a-zA-Z0-9.-]+)?$",
+      "examples": [
+        "ckp://System.Wss:v0.1",
+        "ckp://ConceptKernel.LLM.Fabric:v0.1",
+        "ckp://System.Bakery:v1.0"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "description": "Kernel-specific payload data. Structure must conform to destination kernel's ontology schema (ckp://{to}#schema/{edge}/{action}). Validated against target's queue_contract.",
+      "additionalProperties": true,
+      "examples": [
+        {
+          "action": "capabilities"
+        },
+        {
+          "action": "status"
+        },
+        {
+          "query": "What are the latest trends in AI?",
+          "pattern": "analyze_tech_impact"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "txId": "1733445678901-a1b2c3d4",
+      "edge": "QUERIES",
+      "from": "ckp://Agent.Alice",
+      "to": "ckp://System.Wss:v0.1",
+      "payload": {
+        "action": "capabilities"
+      }
+    },
+    {
+      "txId": "1733445678901-a1b2c3d4",
+      "edge": "RESPONDS",
+      "from": "ckp://System.Wss:v0.1",
+      "to": "ckp://Agent.Alice",
+      "payload": {
+        "capabilities": [
+          "Real-time event broadcasting",
+          "Multi-client pub/sub",
+          "Process URN tracking"
+        ],
+        "interfaces": ["websocket", "notification"]
+      }
+    },
+    {
+      "txId": "1764924334492-08060309",
+      "edge": "QUERIES",
+      "from": "ckp://Agent.Alice",
+      "to": "ckp://ConceptKernel.LLM.Fabric:v0.1",
+      "payload": {
+        "query": "What are the latest trends in AI?",
+        "pattern": "analyze_tech_impact"
+      }
+    },
+    {
+      "txId": "1764924334492-08060309",
+      "edge": "RESPONDS",
+      "from": "ckp://ConceptKernel.LLM.Fabric:v0.1",
+      "to": "ckp://Agent.Alice",
+      "payload": {
+        "response": "Based on current research, AI trends include...",
+        "confidence": 0.95,
+        "sources": ["research-paper-1", "article-2"]
+      }
+    }
+  ],
+  "definitions": {
+    "txIdPattern": {
+      "description": "Transaction ID format: Unix timestamp in milliseconds (13+ digits) followed by hyphen and 8-character hex GUID",
+      "type": "string",
+      "pattern": "^[0-9]{13,}-[a-f0-9]{8}$"
+    },
+    "urnPattern": {
+      "description": "ConceptKernel URN pattern: ckp://{KernelName}:{version} with optional fragment",
+      "type": "string",
+      "pattern": "^ckp://[A-Z][a-zA-Z0-9]*(\\.[A-Z][a-zA-Z0-9]*)*(:[a-zA-Z0-9.-]+)?(#[a-zA-Z0-9/_-]+)?$"
+    },
+    "predicatePattern": {
+      "description": "BFO predicate pattern: SCREAMING_SNAKE_CASE format for semantic edge relationships",
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)*$"
+    }
+  },
+  "$comment": "This schema defines the edge-based message format for v1.3.18+. Each message represents a directed edge in the kernel graph with a BFO predicate describing the relationship type. Payload structure is validated against the destination kernel's ontology schema.",
+  "see_also": [
+    "docs/PROTOCOL-SPECIFICATION.md - Edge-based protocol specification",
+    "docs/CORE.EDGE.v1.3.16.DRAFT-10.PHASE01.md - Edge routing architecture",
+    "ck-client-js/README.md - Client library usage"
+  ],
+  "validation": {
+    "description": "Messages are validated in two stages: (1) Envelope structure validation using this schema, (2) Payload validation against destination kernel's ontology schema at ckp://{to}#schema/{edge}/{action}",
+    "proof_storage": "Validation proofs stored at /concepts/{kernel}/queue/edges/{edge}.{from}/{txId}.inst/payload.json"
+  }
+}
