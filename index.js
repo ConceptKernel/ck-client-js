@@ -42,6 +42,49 @@
 
 console.log('[CK Client Library] Loading ConceptKernel client library with verbose logging...');
 
+// Lazy-load NATS client only when needed
+let natsModule = null;
+async function getNatsModule() {
+  if (!natsModule) {
+    try {
+      // Browser environment - load from CDN
+      if (typeof window !== 'undefined') {
+        // Check if already loaded globally
+        if (typeof window.nats !== 'undefined') {
+          natsModule = window.nats;
+          console.log('[CK Client] Using existing NATS from window.nats');
+        } else {
+          // Dynamically load nats.ws from CDN
+          console.log('[CK Client] Loading NATS WebSocket library from CDN...');
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/nats.ws@1.30.3/+esm';
+            script.type = 'module';
+            script.onload = () => {
+              console.log('[CK Client] NATS WebSocket library loaded from CDN');
+              resolve();
+            };
+            script.onerror = () => reject(new Error('Failed to load NATS from CDN'));
+            document.head.appendChild(script);
+          });
+
+          // Import the module
+          const natsImport = await import('https://cdn.jsdelivr.net/npm/nats.ws@1.30.3/+esm');
+          natsModule = natsImport;
+          console.log('[CK Client] NATS module imported successfully');
+        }
+      } else {
+        // Node.js environment
+        natsModule = await import('nats.ws');
+      }
+    } catch (err) {
+      console.error('[CK Client] Failed to load NATS module:', err);
+      throw new Error('NATS WebSocket client not available. In Node.js: npm install nats.ws. In browser: CDN failed to load.');
+    }
+  }
+  return natsModule;
+}
+
 class ConceptKernel {
   /**
    * Connect to ConceptKernel gateway with auto-discovery
@@ -55,16 +98,24 @@ class ConceptKernel {
    * @param {number} [options.cacheTimeout=60000] - Service discovery cache timeout (ms)
    * @param {boolean} [options.reconnect=true] - Auto-reconnect WebSocket on disconnect
    * @param {number} [options.reconnectDelay=3000] - Reconnect delay (ms)
+   * @param {boolean} [options.directNATS=false] - Use direct NATS connection instead of HTTP gateway
+   * @param {string} [options.natsUrl='ws://127.0.0.1:8080'] - NATS WebSocket URL (only when directNATS=true)
    * @returns {Promise<ConceptKernel>} Connected client instance
    *
    * @example
    * ```javascript
-   * // Connect to local discovery port
+   * // Connect to local discovery port (HTTP gateway)
    * const ck = await ConceptKernel.connect('http://localhost:56000');
    *
    * // Connect with authentication
    * const ck = await ConceptKernel.connect('http://localhost:56000', {
    *   auth: { username: 'alice', password: 'secret123' }
+   * });
+   *
+   * // Connect directly to NATS (bypassing HTTP gateway)
+   * const ck = await ConceptKernel.connect('http://localhost:56000', {
+   *   directNATS: true,
+   *   natsUrl: 'ws://127.0.0.1:8080'
    * });
    *
    * // Connect to remote gateway
@@ -81,6 +132,14 @@ class ConceptKernel {
     console.log('[CK Client] Options:', options);
 
     const client = new ConceptKernel(gatewayUrl, options);
+
+    // If directNATS mode, connect to NATS instead of HTTP gateway
+    if (options.directNATS) {
+      console.log('[CK Client] Direct NATS mode enabled, connecting to:', options.natsUrl || 'ws://127.0.0.1:8080');
+      await client._connectNATS();
+      console.log('[CK Client] NATS connection complete!');
+      return client;
+    }
 
     console.log('[CK Client] Starting service discovery...');
     await client.discover();
@@ -113,6 +172,8 @@ class ConceptKernel {
       cacheTimeout: 60000,
       reconnect: true,
       reconnectDelay: 3000,
+      natsUrl: 'ws://127.0.0.1:8080',
+      directNATS: false,
       ...options
     };
 
@@ -123,6 +184,10 @@ class ConceptKernel {
     this.actor = null;
     this.roles = [];
     this.authenticated = false;
+
+    // NATS connection (when directNATS=true)
+    this.natsConnection = null;
+    this.natsSubscriptions = new Map();
 
     // Event handlers
     this._eventHandlers = {
@@ -476,6 +541,10 @@ class ConceptKernel {
       lastDiscovery: this.lastDiscovery,
       cacheAge: this.lastDiscovery ? Date.now() - this.lastDiscovery : null,
       websocketConnected: !!(this.websocket && this.websocket.readyState === WebSocket.OPEN),
+      natsConnected: !!this.natsConnection,
+      directNATS: this.options.directNATS,
+      natsUrl: this.options.directNATS ? this.options.natsUrl : null,
+      activeNatsSubscriptions: this.natsSubscriptions.size,
       authenticated: this.authenticated,
       actor: this.actor,
       roles: this.roles,
@@ -484,13 +553,279 @@ class ConceptKernel {
   }
 
   /**
-   * Disconnect WebSocket
+   * Disconnect WebSocket and/or NATS connection
    */
-  disconnect() {
+  async disconnect() {
+    // Close NATS connection if active
+    if (this.natsConnection) {
+      console.log('[CK Client] Closing NATS connection...');
+      try {
+        // Unsubscribe all active subscriptions
+        for (const [subject, sub] of this.natsSubscriptions.entries()) {
+          console.log('[CK Client] Unsubscribing from:', subject);
+          sub.unsubscribe();
+        }
+        this.natsSubscriptions.clear();
+
+        // Drain and close connection
+        await this.natsConnection.drain();
+        this.natsConnection = null;
+        console.log('[CK Client] NATS connection closed');
+      } catch (err) {
+        console.error('[CK Client] Error closing NATS connection:', err);
+      }
+    }
+
+    // Close WebSocket if active
     if (this.websocket) {
+      console.log('[CK Client] Closing WebSocket...');
       this.websocket.close();
       this.websocket = null;
     }
+  }
+
+  /**
+   * Get all registered kernels (NATS mode only)
+   * @returns {Promise<Array>} List of kernel URNs
+   *
+   * @example
+   * ```javascript
+   * const kernels = await ck.getKernels();
+   * console.log('Available kernels:', kernels);
+   * ```
+   */
+  async getKernels() {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    const response = await this._natsRequest('ck.discovery.kernels', {});
+    return response.kernels || [];
+  }
+
+  /**
+   * Get all registered edges (NATS mode only)
+   * @returns {Promise<Array>} List of edge definitions
+   *
+   * @example
+   * ```javascript
+   * const edges = await ck.getEdges();
+   * console.log('Available edges:', edges);
+   * ```
+   */
+  async getEdges() {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    const response = await this._natsRequest('ck.discovery.edges', {});
+    return response.edges || [];
+  }
+
+  /**
+   * Subscribe to kernel announcements (NATS mode only)
+   * @param {Function} callback - Callback function receiving kernel data
+   * @returns {Function} Unsubscribe function
+   *
+   * @example
+   * ```javascript
+   * const unsubscribe = ck.subscribeKernels((kernel) => {
+   *   console.log('Kernel update:', kernel);
+   * });
+   *
+   * // Later...
+   * unsubscribe();
+   * ```
+   */
+  subscribeKernels(callback) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    return this._natsSubscribe('ck.announce.kernel.>', (msg) => {
+      try {
+        const data = JSON.parse(this._natsCodec.decode(msg.data));
+        callback(data);
+      } catch (err) {
+        console.error('[CK Client] Failed to parse kernel announcement:', err);
+      }
+    });
+  }
+
+  /**
+   * Subscribe to edge announcements (NATS mode only)
+   * @param {Function} callback - Callback function receiving edge data
+   * @returns {Function} Unsubscribe function
+   *
+   * @example
+   * ```javascript
+   * const unsubscribe = ck.subscribeEdges((edge) => {
+   *   console.log('Edge update:', edge);
+   * });
+   * ```
+   */
+  subscribeEdges(callback) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    return this._natsSubscribe('ck.announce.edge.>', (msg) => {
+      try {
+        const data = JSON.parse(this._natsCodec.decode(msg.data));
+        callback(data);
+      } catch (err) {
+        console.error('[CK Client] Failed to parse edge announcement:', err);
+      }
+    });
+  }
+
+  /**
+   * Subscribe to any NATS subject with custom handler (NATS mode only)
+   * @param {string} subject - NATS subject pattern (supports wildcards)
+   * @param {Function} handler - Message handler function
+   * @returns {Function} Unsubscribe function
+   *
+   * @example
+   * ```javascript
+   * // Listen to all kernel events
+   * const unsub = ck.pump('ck.event.kernel.>', (msg) => {
+   *   console.log('Kernel event:', msg);
+   * });
+   *
+   * // Listen to specific kernel
+   * ck.pump('ck.event.kernel.UI.Bakery', (msg) => {
+   *   console.log('Bakery event:', msg);
+   * });
+   * ```
+   */
+  pump(subject, handler) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    return this._natsSubscribe(subject, (msg) => {
+      try {
+        const data = JSON.parse(this._natsCodec.decode(msg.data));
+        handler(data);
+      } catch (err) {
+        console.error('[CK Client] Failed to parse message on', subject, ':', err);
+      }
+    });
+  }
+
+  /**
+   * Publish message to NATS subject
+   * @param {string} subject - NATS subject
+   * @param {Object|string} data - Message data (will be JSON.stringify'd if object)
+   * @example
+   * ```javascript
+   * // Trigger kernel action
+   * ck.publishToSubject('kernel.Test.Nats.action.emit', { action: 'emit_messages' });
+   * ```
+   */
+  publishToSubject(subject, data) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection required. Use connect() with directNATS=true');
+    }
+
+    console.log('[CK Client] Publishing to subject:', subject);
+
+    const payload = typeof data === 'string' ? data : JSON.stringify(data);
+    const encoded = this._natsCodec.encode(payload);
+
+    this.natsConnection.publish(subject, encoded);
+    console.log('[CK Client] Published:', payload);
+  }
+
+  /**
+   * Connect to NATS WebSocket server
+   * @private
+   */
+  async _connectNATS() {
+    const nats = await getNatsModule();
+    const { connect, StringCodec } = nats;
+
+    console.log('[CK Client] Connecting to NATS:', this.options.natsUrl);
+
+    try {
+      this.natsConnection = await connect({
+        servers: this.options.natsUrl,
+      });
+
+      this._natsCodec = StringCodec();
+
+      console.log('[CK Client] NATS connected successfully');
+
+      // Setup connection closed handler
+      (async () => {
+        for await (const status of this.natsConnection.status()) {
+          console.log('[CK Client] NATS status:', status.type, status.data);
+
+          if (status.type === 'disconnect') {
+            this._emit('disconnected', { type: 'nats' });
+          } else if (status.type === 'reconnect') {
+            this._emit('connected', { type: 'nats' });
+          }
+        }
+      })();
+
+      this._emit('connected', { type: 'nats', url: this.options.natsUrl });
+    } catch (err) {
+      console.error('[CK Client] NATS connection failed:', err);
+      throw new Error(`NATS connection failed: ${err.message}`);
+    }
+  }
+
+  /**
+   * Send NATS request and wait for response
+   * @private
+   */
+  async _natsRequest(subject, data, timeout = 5000) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection not established');
+    }
+
+    try {
+      const payload = this._natsCodec.encode(JSON.stringify(data));
+      const response = await this.natsConnection.request(subject, payload, { timeout });
+      return JSON.parse(this._natsCodec.decode(response.data));
+    } catch (err) {
+      console.error('[CK Client] NATS request failed:', subject, err);
+      throw new Error(`NATS request failed on ${subject}: ${err.message}`);
+    }
+  }
+
+  /**
+   * Subscribe to NATS subject
+   * @private
+   */
+  _natsSubscribe(subject, handler) {
+    if (!this.natsConnection) {
+      throw new Error('NATS connection not established');
+    }
+
+    console.log('[CK Client] Subscribing to NATS subject:', subject);
+
+    const sub = this.natsConnection.subscribe(subject);
+    this.natsSubscriptions.set(subject, sub);
+
+    // Process messages
+    (async () => {
+      try {
+        for await (const msg of sub) {
+          handler(msg);
+        }
+      } catch (err) {
+        console.error('[CK Client] NATS subscription error:', subject, err);
+      }
+    })();
+
+    // Return unsubscribe function
+    return () => {
+      console.log('[CK Client] Unsubscribing from:', subject);
+      sub.unsubscribe();
+      this.natsSubscriptions.delete(subject);
+    };
   }
 
   /**
